@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Code Architect Pro</title>
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css" />
+    
+    <style>
+        :root { 
+            --primary: #38bdf8; --bg: #0f172a; --sidebar: #020617; 
+            --card: #1e293b; --text: #e2e8f0; --accent: #22c55e; --danger: #ef4444;
+        }
+        
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
+
+        /* Sidebar */
+        .sidebar { width: 300px; background: var(--sidebar); border-right: 1px solid #1e293b; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 25px; font-weight: 800; font-size: 1.2rem; color: var(--primary); border-bottom: 1px solid #1e293b; }
+        .history-list { flex: 1; overflow-y: auto; padding: 15px; }
+        .history-item { 
+            padding: 15px; background: #111827; border-radius: 10px; margin-bottom: 12px; 
+            cursor: pointer; border: 1px solid transparent; transition: 0.3s;
+        }
+        .history-item:hover { border-color: var(--primary); background: #1e293b; }
+        .history-item small { color: #64748b; font-size: 0.75rem; }
+
+        /* Main Area */
+        .main-container { flex: 1; overflow-y: auto; padding: 40px; scroll-behavior: smooth; }
+        .content { max-width: 1100px; margin: auto; }
+        
+        h1 { font-weight: 800; font-size: 2.2rem; margin-bottom: 10px; }
+        .subtitle { color: #94a3b8; margin-bottom: 30px; }
+
+        .editor-box { background: var(--card); padding: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        textarea { 
+            width: 100%; height: 250px; background: #020617; border: 1px solid #334155; 
+            border-radius: 10px; color: var(--primary); font-family: 'Fira Code', monospace; 
+            padding: 15px; font-size: 14px; outline: none; box-sizing: border-box; resize: vertical;
+        }
+
+        .controls { display: flex; gap: 15px; margin-top: 15px; }
+        select, .btn { padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; }
+        select { background: #334155; color: white; flex: 1; outline: none; }
+        .btn-primary { background: var(--primary); color: #020617; flex: 2; transition: 0.2s; }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        /* Results Dashboard */
+        #resultArea { display: none; margin-top: 40px; animation: slideUp 0.4s ease-out; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 30px; }
+        .stat-card { background: #111827; padding: 15px; border-radius: 12px; border: 1px solid #1e293b; text-align: center; }
+        .stat-label { color: #64748b; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        .stat-value { font-size: 1.1rem; font-weight: 800; color: var(--accent); }
+
+        .explanation-section { background: rgba(56, 189, 248, 0.05); border-left: 4px solid var(--primary); padding: 20px; border-radius: 0 12px 12px 0; margin-bottom: 30px; }
+        
+        .points-list { columns: 2; column-gap: 40px; margin-bottom: 30px; padding-left: 20px; }
+        .points-list li { margin-bottom: 12px; color: #cbd5e1; list-style-type: "⚡ "; }
+
+        .code-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; margin-top: 20px; }
+        #loader { display: none; text-align: center; color: var(--primary); font-weight: bold; margin: 20px 0; }
+
+        pre { border-radius: 12px !important; margin: 0; border: 1px solid #334155; }
+        pre code { white-space: pre !important; display: block !important; overflow-x: auto; }
+        
+        #codeDisplay, #testDisplay { font-family: 'Fira Code', monospace; font-size: 14px; line-height: 1.5; }
+
+        /* --- DIFF VIEW UI FIXES --- */
+        #diffContainer { 
+            width: 100% !important; 
+            max-width: 100% !important; 
+            background: white; 
+            border-radius: 12px; 
+            overflow-x: auto; 
+            color: black; 
+        }
+        .d2h-wrapper { width: 100%; margin: 0; }
+        .d2h-file-side-diff { margin-right: 0 !important; }
+
+        /* Chat Box */
+        .chat-box { background: #111827; border-radius: 12px; padding: 20px; margin-top: 40px; border: 1px solid #334155; }
+        #chatHistory { max-height: 250px; overflow-y: auto; scroll-behavior: smooth; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="sidebar-header">CODE HISTORY</div>
+    <div id="historyList" class="history-list"></div>
+    <div style="padding: 20px; border-top: 1px solid #1e293b;">
+        <button onclick="clearHistory()" style="width:100%; background:none; border: 1px solid var(--danger); color:var(--danger); padding:10px; border-radius:8px; cursor:pointer; font-weight:600;">Clear History</button>
+    </div>
+</div>
+
+<div class="main-container">
+    <div class="content">
+        <h1>AI Code Architect <span style="color:var(--primary)">Pro</span></h1>
+        <p class="subtitle">Deep logic review, security audit, and complexity analysis via Groq LPU.</p>
+
+        <div class="editor-box">
+            <textarea id="code" placeholder="Paste your code here..."></textarea>
+            <div class="controls">
+                <select id="language">
+                    <option value="python">Python</option>
+                    <option value="java">Java</option>
+                    <option value="javascript">JavaScript</option>
+                </select>
+                <button class="btn btn-primary" id="runBtn" onclick="analyzeCode()">RUN ANALYSIS</button>
+            </div>
+            <div id="loader">⚙️ Architect is reasoning through your logic...</div>
+        </div>
+
+        <div id="resultArea">
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-label">Quality Score</div><div id="scoreVal" class="stat-value">--</div></div>
+                <div class="stat-card"><div class="stat-label">Complexity</div><div id="complexityVal" class="stat-value" style="color: #fbbf24; font-size: 0.9rem;">--</div></div>
+                <div class="stat-card"><div class="stat-label">Security Risk</div><div id="securityVal" class="stat-value">--</div></div>
+                <div class="stat-card"><div class="stat-label">AI Speed</div><div id="speedVal" class="stat-value" style="color: #a855f7;">--</div></div>
+            </div>
+
+            <div class="explanation-section">
+                <h3 style="margin-top:0; color: var(--primary);">Architectural Summary</h3>
+                <div id="explanationVal" style="line-height: 1.6; font-size: 0.95rem;"></div>
+            </div>
+
+            <h3>Key Improvements</h3>
+            <ul id="pointsList" class="points-list"></ul>
+
+            <div class="code-header">
+                <h3>✅ Optimized Version</h3>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn" id="viewToggle" style="background: #334155; color: white; font-size: 11px;" onclick="toggleView()">SHOW DIFF VIEW</button>
+                    <button class="btn" style="background: var(--accent); color: #020617; font-size: 11px;" onclick="copyCode('codeDisplay', this)">COPY CODE</button>
+                </div>
+            </div>
+            
+            <div style="width: 100%; overflow: hidden;">
+                <div id="standardView"><pre><code id="codeDisplay" class="language-python"></code></pre></div>
+                <div id="diffView" style="display:none;"><div id="diffContainer"></div></div>
+            </div>
+
+            <div style="margin-top: 35px;">
+                <div class="code-header">
+                    <h3>🧪 Automated Test Suite</h3>
+                    <button class="btn" style="background: var(--primary); color: #020617; font-size: 11px;" onclick="copyCode('testDisplay', this)">COPY TESTS</button>
+                </div>
+                <pre><code id="testDisplay" class="language-python"></code></pre>
+            </div>
+
+            <div class="chat-box">
+                <h4 style="margin-top:0; color: var(--primary);">💬 Developer Dialogue</h4>
+                <div id="chatHistory">
+                    <p id="chatIntro" style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 10px;"></p>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <input type="text" id="chatInput" style="flex:1; background:#020617; border:1px solid #334155; border-radius:8px; padding:12px; color:white;" placeholder="Ask why or request a modification...">
+                    <button class="btn btn-primary" style="font-size: 12px;" onclick="sendChatMessage()">SEND</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.1.0/diff.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html.min.js"></script>
+
+<script>
+    let currentCode = "";
+    let originalCodeInput = "";
+    let isDiffMode = false;
+
+    // Load history on startup
+    document.addEventListener('DOMContentLoaded', loadHistory);
+
+    // Enter Key Support for Chat
+    document.getElementById("chatInput").addEventListener("keypress", (e) => {
+        if (e.key === "Enter") sendChatMessage();
+    });
+
+    async function analyzeCode() {
+        const code = document.getElementById("code").value;
+        const language = document.getElementById("language").value;
+        if(!code) return alert("Please paste code!");
+
+        originalCodeInput = code; // Save for Diff
+        const btn = document.getElementById("runBtn");
+        const loader = document.getElementById("loader");
+        
+        btn.disabled = true;
+        loader.style.display = "block";
+        document.getElementById("resultArea").style.display = "none";
+
+        try {
+            const response = await fetch("/review", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ code, language })
+            });
+            const data = await response.json();
+            
+            updateUI(data, language);
+            saveToHistory(data, language, code.substring(0, 25));
+        } catch (e) {
+            alert("Analysis failed. Verify your Groq Key in .env and internet connection.");
+        } finally {
+            btn.disabled = false;
+            loader.style.display = "none";
+        }
+    }
+
+    function updateUI(data, language) {
+        document.getElementById("scoreVal").innerText = data.score;
+        document.getElementById("complexityVal").innerText = data.complexity;
+        document.getElementById("explanationVal").innerText = data.explanation;
+        document.getElementById("speedVal").innerText = data.speed || "N/A";
+        document.getElementById("chatIntro").innerText = data.chat_intro || "Review complete. What's next?";
+        
+        const secVal = document.getElementById("securityVal");
+        secVal.innerText = data.security_risk || "Low";
+        if(data.security_risk === "High") secVal.style.color = "var(--danger)";
+        else if(data.security_risk === "Medium") secVal.style.color = "#f59e0b";
+        else secVal.style.color = "var(--accent)";
+
+        const list = document.getElementById("pointsList");
+        list.innerHTML = (data.points || []).map(p => `<li>${p}</li>`).join('');
+
+        currentCode = data.improved_code;
+        document.getElementById("codeDisplay").textContent = currentCode;
+        document.getElementById("testDisplay").textContent = data.unit_tests || "No tests generated.";
+        
+        // Reset View to standard
+        isDiffMode = false;
+        document.getElementById("standardView").style.display = "block";
+        document.getElementById("diffView").style.display = "none";
+        document.getElementById("viewToggle").innerText = "SHOW DIFF VIEW";
+
+        Prism.highlightAll();
+        document.getElementById("resultArea").style.display = "block";
+        document.querySelector(".main-container").scrollTo({ top: 500, behavior: 'smooth' });
+    }
+
+    function toggleView() {
+        isDiffMode = !isDiffMode;
+        const std = document.getElementById("standardView");
+        const diff = document.getElementById("diffView");
+        const btn = document.getElementById("viewToggle");
+
+        if (isDiffMode) {
+            std.style.display = "none"; 
+            diff.style.display = "block"; 
+            btn.innerText = "SHOW CODE ONLY";
+
+            const patch = Diff.createPatch("file", originalCodeInput, currentCode);
+            const html = Diff2Html.html(patch, {
+                drawFileList: false,
+                matching: 'lines',
+                outputFormat: 'side-by-side',
+                highlight: true
+            });
+            document.getElementById("diffContainer").innerHTML = html;
+        } else {
+            std.style.display = "block"; 
+            diff.style.display = "none"; 
+            btn.innerText = "SHOW DIFF VIEW";
+        }
+    }
+
+    async function sendChatMessage() {
+        const input = document.getElementById("chatInput");
+        const history = document.getElementById("chatHistory");
+        const msg = input.value.trim();
+        if(!msg) return;
+
+        history.innerHTML += `<p style="margin:8px 0;"><b style="color:var(--primary)">You:</b> ${msg}</p>`;
+        input.value = "";
+        history.scrollTop = history.scrollHeight;
+
+        const tempId = "temp-" + Date.now();
+        history.innerHTML += `<p id="${tempId}" style="margin:8px 0;"><b style="color:var(--accent)">Architect:</b> <span style="opacity:0.6">Thinking...</span></p>`;
+
+        try {
+            const res = await fetch("/review", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ code: currentCode, language: "general", user_query: msg })
+            });
+            const data = await res.json();
+            document.getElementById(tempId).innerHTML = `<b style="color:var(--accent)">Architect:</b> ${data.explanation}`;
+        } catch(e) {
+            document.getElementById(tempId).innerHTML = `<b style="color:var(--danger)">Architect:</b> Error communicating with server.`;
+        }
+        history.scrollTop = history.scrollHeight;
+    }
+
+    function copyCode(id, btn) {
+        navigator.clipboard.writeText(document.getElementById(id).textContent);
+        const oldTxt = btn.innerText;
+        btn.innerText = "COPIED!";
+        btn.style.background = "#fff";
+        setTimeout(() => { btn.innerText = oldTxt; btn.style.background = ""; }, 2000);
+    }
+
+    function saveToHistory(data, lang, snippet) {
+        let history = JSON.parse(localStorage.getItem('architect_v2_history') || '[]');
+        history.unshift({ data, lang, snippet, date: new Date().toLocaleTimeString() });
+        localStorage.setItem('architect_v2_history', JSON.stringify(history.slice(0, 15)));
+        loadHistory();
+    }
+
+    function loadHistory() {
+        const list = document.getElementById("historyList");
+        const history = JSON.parse(localStorage.getItem('architect_v2_history') || '[]');
+        list.innerHTML = history.map((item, index) => `
+            <div class="history-item" onclick='loadHistoryItem(${index})'>
+                <small>${item.date} • ${item.lang}</small><br>
+                <strong>${item.snippet}...</strong>
+            </div>
+        `).join('');
+    }
+
+    function loadHistoryItem(index) {
+        const history = JSON.parse(localStorage.getItem('architect_v2_history') || '[]');
+        updateUI(history[index].data, history[index].lang);
+    }
+
+    function clearHistory() {
+        if(confirm("Wipe all history?")) { localStorage.removeItem('architect_v2_history'); loadHistory(); }
+    }
+</script>
+</body>
+</html>
