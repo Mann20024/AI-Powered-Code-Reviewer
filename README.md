@@ -32,3 +32,9 @@ Follow these instructions to set up and run the project locally.
    ```bash
    git clone [https://github.com/YourUsername/ai-code-reviewer.git](https://github.com/YourUsername/ai-code-reviewer.git)
    cd ai-code-reviewer
+
+2. **pip install -r requirements.txt**
+3. **Set up Environment Variables:**
+   Create a `.env` file in the root directory of the project and add your API key:
+   ```env
+   OPENAI_API_KEY=your_actual_api_key_here
